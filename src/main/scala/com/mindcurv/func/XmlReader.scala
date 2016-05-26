@@ -93,13 +93,13 @@ object XmlReader {
   }
 
   def main(args: Array[String]): Unit = {
-    Authenticator.setDefault(new ProxyAuthenticator());
+    /* Authenticator.setDefault(new ProxyAuthenticator());
 
     System.getProperties().put("http.proxyHost", "proxycorp.geci");
     System.getProperties().put("http.proxyPort", "8080");
     System.getProperties().put("http.proxyUser", "T0000104");
     System.getProperties().put("http.proxyPassword", "12345678");
-    System.getProperties().put("proxySet", "true");
+    System.getProperties().put("proxySet", "true"); */
 
     val links: List[String] = crawl("http://www.scala-lang.org", 3)
     print(links)
