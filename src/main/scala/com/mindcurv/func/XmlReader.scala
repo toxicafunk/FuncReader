@@ -6,7 +6,7 @@ import javax.xml.parsers.SAXParser
 import org.xml.sax.InputSource
 
 import scala.annotation.tailrec
-import scala.xml.NodeSeq
+import scala.xml.{Node, NodeSeq}
 import scala.xml.parsing.NoBindingFactoryAdapter
 
 /**
@@ -66,30 +66,35 @@ object XmlReader {
       })
     } */
 
-    def readURL(url: String): NodeSeq = {
-      val root = parser.load(new URL(url))
-      root \\ "a"
+    def readURL(url: String): Node = {
+      parser.load(new URL(url))
+    }
+
+    def extractLinks(root: Node): Seq[String] = {
+      val links: NodeSeq = root \\ "a" \\ "@href"
+      links.map(node => node.text)
     }
 
     @tailrec
-    def loop(urls: NodeSeq, acc: List[String], index: Int = 0): List[String] = {
+    def loop(urls: Seq[String], acc: List[String], index: Int = 0): List[String] = {
+      println(index)
+      println(urls)
       if (index == depth) acc
       else {
-        urls.theSeq match {
-          case NodeSeq.Empty => acc
+        urls match {
           case x :: xs => {
-            val n: NodeSeq = x \\ "@href"
-            println(n)
-            val href: String = if (n.text.startsWith("http")) n.text else url + n.text
+            val href: String = if (x.startsWith("http")) x else url + x
             println(href)
-            readURL(href) :: acc
+            href :: acc
+            println(acc)
             loop(xs, acc, index + 1)
           }
+          case _ => acc
         }
       }
     }
 
-    loop(readURL(url), List(), 0)
+    loop(extractLinks(readURL(url)), List(), 0)
   }
 
   def main(args: Array[String]): Unit = {
