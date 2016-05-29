@@ -76,32 +76,27 @@ object XmlReader {
     }
 
     @tailrec
-    def loop(urls: Seq[String], acc: List[String], depth: Int = 0): List[String] = {
+    def loop(urls: Seq[String], acc: List[String]): List[String] = {
       println(urls)
       println(acc)
-      def addToList(x: String): List[String] = {
-        val href: String = if (x.startsWith("http")) x else url + x
-        val links = href :: acc
-        links
+      def ensureAbsolute(x: String): String = {
+        if (x.startsWith("http")) x else url + x
       }
 
-      if (depth == depth) { println("max depth reached"); acc }
+      if (depth == 3) { println("max depth reached"); acc }
       else {
         urls match {
           case x :: xs => {
-            val links: List[String] = addToList(x)
-            loop(xs, links, depth)
-          }
-          case x :: Seq.empty => {
-            val links: List[String] = addToList(x)
-            loop(Seq.empty, links, depth)
+            val href: String = ensureAbsolute(x)
+            val links: List[String] = href :: crawl(href, depth + 1)
+            loop(xs, links)
           }
           case _ => { println("empty?"); acc }
         }
       }
     }
 
-    loop(extractLinks(readURL(url)), List(), 0)
+    loop(extractLinks(readURL(url)), List[String]())
   }
 
   def main(args: Array[String]): Unit = {
@@ -113,7 +108,7 @@ object XmlReader {
     System.getProperties().put("http.proxyPassword", "12345678");
     System.getProperties().put("proxySet", "true"); */
 
-    val links: List[String] = crawl("http://www.scala-lang.org", 3)
+    val links: List[String] = crawl("http://www.scala-lang.org", 0)
     print(links)
   }
 }
