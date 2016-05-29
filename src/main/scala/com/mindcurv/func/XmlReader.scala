@@ -76,20 +76,27 @@ object XmlReader {
     }
 
     @tailrec
-    def loop(urls: Seq[String], acc: List[String], index: Int = 0): List[String] = {
-      println(index)
+    def loop(urls: Seq[String], acc: List[String], depth: Int = 0): List[String] = {
       println(urls)
-      if (index == depth) acc
+      println(acc)
+      def addToList(x: String): List[String] = {
+        val href: String = if (x.startsWith("http")) x else url + x
+        val links = href :: acc
+        links
+      }
+
+      if (depth == depth) { println("max depth reached"); acc }
       else {
         urls match {
           case x :: xs => {
-            val href: String = if (x.startsWith("http")) x else url + x
-            println(href)
-            href :: acc
-            println(acc)
-            loop(xs, acc, index + 1)
+            val links: List[String] = addToList(x)
+            loop(xs, links, depth)
           }
-          case _ => acc
+          case x :: Seq.empty => {
+            val links: List[String] = addToList(x)
+            loop(Seq.empty, links, depth)
+          }
+          case _ => { println("empty?"); acc }
         }
       }
     }
