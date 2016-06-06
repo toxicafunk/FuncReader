@@ -1,12 +1,12 @@
 package com.mindcurv.func
 
-import java.net.URL
+import java.net.{Authenticator, URL}
 import javax.xml.parsers.SAXParser
 
 import org.xml.sax.InputSource
 
+import scala.xml.Node
 import scala.xml.parsing.NoBindingFactoryAdapter
-import scala.xml.{Node, NodeSeq}
 
 
 class HTML5Parser extends NoBindingFactoryAdapter {
@@ -33,19 +33,23 @@ object XmlReader {
   val parser: HTML5Parser = new HTML5Parser()
 
   def main(args: Array[String]): Unit = {
-    /* Authenticator.setDefault(new ProxyAuthenticator());
+    Authenticator.setDefault(new ProxyAuthenticator());
 
     System.getProperties().put("http.proxyHost", "proxycorp.geci");
     System.getProperties().put("http.proxyPort", "8080");
     System.getProperties().put("http.proxyUser", "T0000104");
     System.getProperties().put("http.proxyPassword", "12345678");
-    System.getProperties().put("proxySet", "true"); */
+    System.getProperties().put("proxySet", "true");
 
-    val links: Set[String] = crawl("https://toxicafunk.wordpress.com/", 0)
-    print(s"Final Result: $links")
+    val links: Set[String] = crawl("https://toxicafunk.wordpress.com/", 1, "concurrence", 5)
+    print(s"Final Result: ${links.size} links found.\n$links")
   }
 
-  def crawl(url: String, depth: Int): Set[String] = {
+  def crawl(url: String, depth: Int, term:String, limit: Int = 10): Set[String] = {
+
+    val processedUrls: List[String] = List()
+    val foundLinks: Set[String] = Set()
+    val relevantPages: List[String] = List()
 
     def readURL(url: String): Node =
       try {
@@ -58,14 +62,15 @@ object XmlReader {
         }
       }
 
-    def extractLinks(root: Node): Seq[String] = {
-      val links: NodeSeq = root \\ "a" \\ "@href"
-      links.map(node => node.text)
-    }
-
     //@tailrec
-    def loop(urls: Seq[String], acc: Set[String], depth: Int): Set[String] = {
-      println("depth: " + depth)
+    def loop(urls: Seq[String], depth: Int): Set[String] = {
+      println(s"urls size: ${urls.size} depth: $depth")
+
+      def extractLinks(root: Node): Seq[String] = {
+        val links: Seq[String] = (root \\ "a" \\ "@href").take(limit).map(node => node.text).map(href => ensureAbsolute(href))
+        //println(links)
+        links
+      }
 
       def ensureAbsolute(x: String): String = {
         if (x.startsWith("http")) x
@@ -81,20 +86,24 @@ object XmlReader {
         else url + x
       }
 
-      if (depth == 3) { println("max depth reached"); acc }
+      if (depth == 3) { println("max depth reached"); foundLinks ++ urls.toSet }
       else {
-        val ls = for {
+        val ls: Seq[String] = for {
           x: String <- urls
           page: Node <- {
-            if (!acc.contains(x)) readURL(ensureAbsolute(x))
+            if (!processedUrls.contains(x)) { x :: processedUrls; readURL(ensureAbsolute(x)) }
             else <html/>
           }
-          links <- extractLinks(page)
-        } yield links
-        loop(ls, ls.toSet ++ acc, depth + 1)
+          link: String <- {
+            page :: relevantPages
+            extractLinks(page)
+          }
+        } yield link
+        //println(s"Found ${ls.size} links!")
+        foundLinks ++ ls.toSet ++ loop(ls, depth + 1)
       }
     }
 
-    loop(extractLinks(readURL(url)).toSeq, Set[String](), 0)
+    loop(Seq(url), depth)
   }
 }
