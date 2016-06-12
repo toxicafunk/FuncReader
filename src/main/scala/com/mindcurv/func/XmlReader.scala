@@ -53,7 +53,7 @@ object XmlReader {
 
     def readURL(url: String): Node =
       try {
-        println(s"loading url $url")
+          println(s"loading url $url")
         parser.load(new URL(url))
       } catch {
         case _: Throwable => {
