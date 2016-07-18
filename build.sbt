@@ -15,5 +15,7 @@ libraryDependencies ++= Seq(
   "nu.validator.htmlparser" % "htmlparser" % "1.2.1",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.4",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
-  "org.scala-lang.modules" %% "scala-swing" % "1.0.1"
+  "org.scala-lang.modules" %% "scala-swing" % "1.0.1",
+  "org.scalaz" %% "scalaz-core" % "7.2.0",
+  "org.scalaz" %% "scalaz-scalacheck-binding" % "7.2.0"
 )
