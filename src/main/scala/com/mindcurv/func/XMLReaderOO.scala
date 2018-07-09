@@ -2,22 +2,96 @@ package com.mindcurv.func
 
 import java.net.{Authenticator, URL}
 
-trait URLObj {
-  def url: URL
-  def state: String
-  def foundLinks: Set[String]
-  def relevantPages: List[String]
+import com.mindcurv.func.State.State
+
+import scala.xml.Node
+
+object State extends Enumeration {
+  type State = Value
+  val INITIAL, READ, PROCESSED, NOTFOUND = Value
+}
+
+case class URLObj(url: URL, state: State = State.INITIAL) {
+  override def hashCode(): Int = 41 * url.hashCode()
+
+  override def equals(obj: scala.Any): Boolean = obj match {
+    case that: URLObj => this.url == that.url
+    case _  => false
+  }
+}
+
+trait Crawler {
+  def initialUrl: String
+  def foundLinks: Set[URLObj]
+  def relevantPages: List[URLObj]
   def crawl(term: String, limit: Int)
 }
 
-case class UrlHtmlReader(url: URL) extends URLObj {
-  override def state: String = ???
+case class SimpleCrawler extends Crawler {
 
-  override def relevantPages: List[String] = List[String]()
+  val parser: HTML5Parser = new HTML5Parser()
 
-  override def foundLinks: Set[String] = Set[String]()
+  override def relevantPages: List[URLObj] = List[URLObj]()
 
-  override def crawl(term: String, limit: Int): Unit = ???
+  override def foundLinks: Set[URLObj] = Set[URLObj]()
+
+  override def crawl(targetUrl: String, term: String, limit: Int): Unit = {
+    def readURL(url: URLObj): Node =
+      try {
+        println(s"loading url $url")
+        parser.load(url.url)
+      } catch {
+        case _: Throwable => {
+          println(url + " not found!")
+            <html/>
+        }
+      }
+
+    //@tailrec
+    def loop(urls: Seq[URLObj], depth: Int): Set[URLObj] = {
+      println(s"urls size: ${urls.size} depth: $depth")
+
+      def extractLinks(root: Node): Seq[String] = {
+        val links: Seq[String] = (root \\ "a" \\ "@href").take(limit).map(node => node.text).map(href => ensureAbsolute(href))
+        //println(links)
+        links
+      }
+
+      def ensureAbsolute(x: String): URLObj = {
+        if (x.startsWith("http")) x
+        else if (!x.startsWith("/")) {
+          val i: Int  = x.indexOf("/")
+          if (i != -1) {
+            val s: String = x.substring(i)
+            if (!s.isEmpty) targetUrl + s
+            else ""
+          }
+          else ""
+        }
+        else targetUrl + x
+      }
+
+      if (depth == 3) { println("max depth reached"); foundLinks ++ urls.toSet }
+      else {
+        val ls: Seq[String] = for {
+          x: URLObj <- urls
+          page: Node <- {
+            if (!foundLinks.contains(x)) { foundLinks :+ x; readURL(ensureAbsolute(x)) }
+            else <html/>
+          }
+          link: String <- {
+            page :: relevantPages
+            extractLinks(page)
+          }
+        } yield link
+        //println(s"Found ${ls.size} links!")
+        foundLinks ++ ls.toSet ++ loop(ls, depth + 1)
+      }
+    }
+
+    val urlObj = URLObj(new URL(targetUrl))
+    loop(Seq(urlObj), 1)
+  }
 }
 
 /**
